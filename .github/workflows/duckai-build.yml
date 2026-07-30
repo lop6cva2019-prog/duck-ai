@@ -1,1 +1,47 @@
+name: Build DuckAI Android APK 🦆
 
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y git zip unzip openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev libncurses5-dev ncurses-dev libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev libffi-dev libssl-dev
+        pip install --upgrade pip setuptools
+        pip install "cython<3.0.0" buildozer kivy requests certifi
+
+    - name: Init Buildozer Spec if not exist
+      run: |
+        if [ ! -f buildozer.spec ]; then
+          buildozer init
+          sed -i 's/title = My Application/title = Duck AI/g' buildozer.spec
+          sed -i 's/package.name = myapp/package.name = duckai/g' buildozer.spec
+          sed -i 's/requirements = python3,kivy/requirements = python3,kivy,requests,urllib3,chardet,idna,certifi/g' buildozer.spec
+          sed -i 's/#android.permissions = INTERNET/android.permissions = INTERNET/g' buildozer.spec
+          sed -i 's/#android.accept_sdk_license = False/android.accept_sdk_license = True/g' buildozer.spec
+        fi
+
+    - name: Build APK with Buildozer
+      run: |
+        yes | buildozer -v android debug
+
+    - name: Upload DuckAI APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: DuckAI-APK
+        path: bin/*.apk
+        
